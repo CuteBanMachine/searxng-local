@@ -1,0 +1,14 @@
+# Сгенерировано searxng-local. Не редактируйте вручную —
+# при удалении файл будет создан заново с новым secret_key.
+use_default_settings: true
+
+server:
+  secret_key: "{{SECRET_KEY}}"
+  bind_address: "127.0.0.1"
+  port: {{PORT}}
+  limiter: false
+
+search:
+  formats:
+    - html
+    - json
