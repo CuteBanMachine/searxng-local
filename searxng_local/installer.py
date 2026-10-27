@@ -415,8 +415,8 @@ def install(install_dir: Path | str, port: int, *, force_pip: bool = False) -> d
         )
 
     if force_pip or venv_rebuilt or not marker.get("pip_done"):
-        _run([python, "-m", "pip", "install", "-U", "pip", "setuptools", "wheel"])
-        _run([python, "-m", "pip", "install", "-r", repo_dir / "requirements.txt"])
+        _run([python, "-m", "pip", "install", "-U", "pip", "setuptools", "wheel", "--index", "https://pypi.org"])
+        _run([python, "-m", "pip", "install", "-r", repo_dir / "requirements.txt","--index", "https://pypi.org"])
         try:
             _run([python, "-m", "pip", "install", "-e", repo_dir])
         except InstallError:
