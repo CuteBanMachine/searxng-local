@@ -9,7 +9,7 @@ import asyncio
 import time
 from typing import NamedTuple
 
-from searxng_local import SearXNG, exceptions
+from searxng import SearXNG, exceptions
 
 
 class RequestResult(NamedTuple):

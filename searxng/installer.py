@@ -4,10 +4,8 @@
 но независимо от него:
 
 1. ``git clone --depth 1`` upstream SearXNG -> ``<install_dir>/repo``;
-2. venv от текущего интерпретатора -> ``<install_dir>/.venv``;
-3. ``pip install -r requirements.txt`` + ``pip install -e .``;
-4. Windows-патч ``searx/valkeydb.py`` (опциональный ``import pwd``);
-5. генерация ``settings.yml`` со случайным ``secret_key`` и заданным портом.
+2. Windows-патч ``searx/valkeydb.py`` (опциональный ``import pwd``);
+3. генерация ``settings.yml`` со случайным ``secret_key`` и заданным портом.
 
 Все шаги идемпотентны: завершённые пропускаются, поэтому ``install()``
 можно вызывать повторно для «ремонта» частичной установки.
@@ -42,7 +40,6 @@ SEARXNG_REPO_URL = "https://github.com/searxng/searxng.git"
 MINIMUM_PYTHON = (3, 11)
 
 REPO_DIR_NAME = "repo"
-VENV_DIR_NAME = ".venv"
 SETTINGS_NAME = "settings.yml"
 LOGS_DIR_NAME = "logs"
 MARKER_NAME = ".searxng-local.json"
@@ -179,11 +176,6 @@ def _rmtree_strict(path: Path, *, retries: int = 3, delay: float = 1.0) -> None:
     )
 
 
-def venv_python(install_dir: Path | str) -> Path:
-    """Путь к python.exe виртуального окружения установки."""
-    return Path(install_dir) / VENV_DIR_NAME / "Scripts" / "python.exe"
-
-
 def read_marker(install_dir: Path | str) -> dict[str, Any] | None:
     """Читает маркер установки (None — установка отсутствует/повреждена)."""
     marker = Path(install_dir) / MARKER_NAME
@@ -284,7 +276,7 @@ def _clone_windows_safe(git: str, repo_dir: Path) -> None:
 
 
 def ensure_supported_host() -> None:
-    """Интерпретатор, создающий venv, должен быть 3.11+ (иначе ``tomllib`` нет)."""
+    """Интерпретатор должен быть 3.11+ (иначе ``tomllib`` нет)."""
     if sys.platform != "win32":
         raise UnsupportedPlatformError(
             f"searxng-local поддерживает только Windows (получено: {sys.platform})."
@@ -292,42 +284,9 @@ def ensure_supported_host() -> None:
     if sys.version_info < MINIMUM_PYTHON:
         raise UnsupportedPlatformError(
             f"Установку нужно запускать Python {MINIMUM_PYTHON[0]}.{MINIMUM_PYTHON[1]}+ "
-            f"(сейчас {sys.version.split()[0]}). Без 3.11+ в venv не будет stdlib-модуля "
+            f"(сейчас {sys.version.split()[0]}). Без 3.11+ не будет stdlib-модуля "
             "tomllib, который импортирует upstream SearXNG. Например: `py -3.12 -m ...`."
         )
-
-
-def _exe_version(exe: Path) -> tuple[int, int] | None:
-    """``(major, minor)`` интерпретатора ``exe``; None, если определить не удалось."""
-    try:
-        proc = subprocess.run(
-            [str(exe), "-IS", "-c", "import sys; print(*sys.version_info[:2])"],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            creationflags=_CREATE_NO_WINDOW,
-            timeout=60,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    parts = (proc.stdout or "").split()
-    if len(parts) >= 2 and parts[0].isdigit() and parts[1].isdigit():
-        return int(parts[0]), int(parts[1])
-    return None
-
-
-def venv_is_valid(install_dir: Path | str) -> bool:
-    """venv есть и создан Python не старше :data:`MINIMUM_PYTHON`.
-
-    venv от старого Python внешне неотличим от правильного, но SearXNG в нём
-    падает на ``import tomllib`` — поэтому проверяем фактическую версию.
-    """
-    python = venv_python(install_dir)
-    if not python.is_file():
-        return False
-    version = _exe_version(python)
-    return version is not None and version >= MINIMUM_PYTHON
 
 
 def ensure_git() -> str:
@@ -383,9 +342,7 @@ def render_settings(dest: Path, port: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def install(
-    install_dir: Path | str, port: int, *, force_pip: bool = False
-) -> dict[str, Any]:
+def install(install_dir: Path | str, port: int) -> dict[str, Any]:
     """Устанавливает SearXNG в ``install_dir`` (идемпотентно).
 
     Возвращает словарь-маркер установки. Шаги, уже выполненные ранее
@@ -416,72 +373,19 @@ def install(
             raise
     commit = _run([git, "-C", repo_dir, "rev-parse", "--short", "HEAD"]).strip()
 
-    # venv от Python <3.11 бесполезен (нет tomllib) — пересоздаём от текущего
-    venv_rebuilt = False
-    if (install_dir / VENV_DIR_NAME).exists() and not venv_is_valid(install_dir):
-        _rmtree_strict(install_dir / VENV_DIR_NAME)
-        venv_rebuilt = True
-
-    python = venv_python(install_dir)
-    if not python.is_file():
-        _run([sys.executable, "-m", "venv", install_dir / VENV_DIR_NAME])
-        venv_rebuilt = True
-    if not venv_is_valid(install_dir):
-        raise InstallError(
-            f"venv {install_dir / VENV_DIR_NAME} не проходит проверку версии Python "
-            f"{MINIMUM_PYTHON[0]}.{MINIMUM_PYTHON[1]}+. Удалите каталог установки "
-            "и повторите установку Python 3.11+."
-        )
-
-    if force_pip or venv_rebuilt or not marker.get("pip_done"):
-        _run(
-            [
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-U",
-                "pip",
-                "setuptools",
-                "wheel",
-                "--index",
-                "https://pypi.org",
-            ]
-        )
-        _run(
-            [
-                python,
-                "-m",
-                "pip",
-                "install",
-                "-r",
-                repo_dir / "requirements.txt",
-                "--index",
-                "https://pypi.org",
-            ]
-        )
-        try:
-            _run([python, "-m", "pip", "install", "-e", repo_dir])
-        except InstallError:
-            # у upstream бывают проблемы со сборкой при изоляции — ретрай
-            _run(
-                [python, "-m", "pip", "install", "--no-build-isolation", "-e", repo_dir]
-            )
-
     apply_windows_patch(repo_dir)
 
     settings = install_dir / SETTINGS_NAME
     if not settings.is_file():
         render_settings(settings, port)
 
-    version = _exe_version(python) or MINIMUM_PYTHON
+    version = sys.version_info[:2]
     marker = {
         "version": MARKER_VERSION,
         "port": int(port),
         "commit": commit,
         "python": ".".join(str(part) for part in version),
         "patched": True,
-        "pip_done": True,
     }
     (install_dir / MARKER_NAME).write_text(
         json.dumps(marker, indent=2), encoding="utf-8", newline="\n"
@@ -509,4 +413,4 @@ def update(install_dir: Path | str) -> dict[str, Any]:
     repo_dir = install_dir / REPO_DIR_NAME
     _rmtree_strict(repo_dir)
     _clone_windows_safe(git, repo_dir)
-    return install(install_dir, port, force_pip=True)
+    return install(install_dir, port)

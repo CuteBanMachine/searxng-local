@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 
-from searxng_local import SearXNG
+from searxng import SearXNG
 
 
 async def run(instance: SearXNG) -> None:
