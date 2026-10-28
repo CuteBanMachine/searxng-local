@@ -371,6 +371,7 @@ class SearXNG:
 
         env = os.environ.copy()
         env["SEARXNG_SETTINGS_PATH"] = str(self._settings_file)
+        env["PYTHONPATH"] = str(repo_dir) + os.pathsep + env.get("PYTHONPATH", "")
         env["PYTHONUTF8"] = "1"
 
         out = open(logs_dir / "searxng.log", "ab")

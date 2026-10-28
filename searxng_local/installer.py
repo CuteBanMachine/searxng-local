@@ -76,7 +76,7 @@ def _pwd_block_guard(match: re.Match[str]) -> str:
         f"{indent}    user_name, user_id = _pw.pw_name, _pw.pw_uid\n"
         f"{indent}else:\n"
         f"{indent}    user_name, user_id = os.environ.get('USERNAME', 'unknown'), os.getpid()\n"
-        f"{indent}logger.exception(\"[%s (%s)] can't connect valkey DB ...\", user_name, user_id)\n"
+        f'{indent}logger.exception("[%s (%s)] can\'t connect valkey DB ...", user_name, user_id)\n'
     )
 
 
@@ -96,7 +96,9 @@ def apply_windows_patch(repo_dir: Path) -> bool:
     text = _PWD_BLOCK_RE.sub(_pwd_block_guard, text)
 
     if _PWD_IMPORT_RE.search(text):
-        raise InstallError("Патч valkeydb.py не применился: остался голый 'import pwd'.")
+        raise InstallError(
+            "Патч valkeydb.py не применился: остался голый 'import pwd'."
+        )
     if "_pw = pwd.getpwuid" in text and "if pwd is not None:" not in text:
         raise InstallError(
             "Патч valkeydb.py не применился: блок pwd.getpwuid остался без защиты "
@@ -150,7 +152,9 @@ def _rmtree_on_error(func, target, _exc) -> None:  # pragma: no cover - зави
 
 def _rmtree_force(path: Path) -> None:
     kwargs = (
-        {"onexc": _rmtree_on_error} if sys.version_info >= (3, 12) else {"onerror": _rmtree_on_error}
+        {"onexc": _rmtree_on_error}
+        if sys.version_info >= (3, 12)
+        else {"onerror": _rmtree_on_error}
     )
     shutil.rmtree(path, **kwargs)
 
@@ -201,7 +205,10 @@ def port_in_use(port: int, host: str = "127.0.0.1", timeout: float = 0.5) -> boo
 
 _WIN_FORBIDDEN_CHARS = set('<>:"|?*')
 _WIN_RESERVED_NAMES = {
-    "CON", "PRN", "AUX", "NUL",
+    "CON",
+    "PRN",
+    "AUX",
+    "NUL",
     *(f"COM{i}" for i in range(1, 10)),
     *(f"LPT{i}" for i in range(1, 10)),
 }
@@ -254,8 +261,15 @@ def _clone_windows_safe(git: str, repo_dir: Path) -> None:
     try:
         with feed.open("rb") as handle:
             _run(
-                [git, "-C", repo_dir, "-c", "core.protectNTFS=false",
-                 "update-index", "--index-info"],
+                [
+                    git,
+                    "-C",
+                    repo_dir,
+                    "-c",
+                    "core.protectNTFS=false",
+                    "update-index",
+                    "--index-info",
+                ],
                 stdin=handle,
             )
     finally:
@@ -327,9 +341,7 @@ def ensure_git() -> str:
     return git
 
 
-def _run(
-    cmd: list[str | Path], *, cwd: Path | None = None, stdin: Any = None
-) -> str:
+def _run(cmd: list[str | Path], *, cwd: Path | None = None, stdin: Any = None) -> str:
     proc = subprocess.run(
         [str(part) for part in cmd],
         cwd=None if cwd is None else str(cwd),
@@ -340,6 +352,11 @@ def _run(
         stdin=stdin,
         creationflags=_CREATE_NO_WINDOW,
     )
+    if proc.stdout:
+        print(proc.stdout, end="")
+    if proc.stderr:
+        print(proc.stderr, end="", file=sys.stderr)
+
     if proc.returncode != 0:
         details = (proc.stderr or proc.stdout or "").strip()[-2000:]
         raise InstallError(
@@ -366,7 +383,9 @@ def render_settings(dest: Path, port: int) -> None:
 # ---------------------------------------------------------------------------
 
 
-def install(install_dir: Path | str, port: int, *, force_pip: bool = False) -> dict[str, Any]:
+def install(
+    install_dir: Path | str, port: int, *, force_pip: bool = False
+) -> dict[str, Any]:
     """Устанавливает SearXNG в ``install_dir`` (идемпотентно).
 
     Возвращает словарь-маркер установки. Шаги, уже выполненные ранее
@@ -415,13 +434,39 @@ def install(install_dir: Path | str, port: int, *, force_pip: bool = False) -> d
         )
 
     if force_pip or venv_rebuilt or not marker.get("pip_done"):
-        _run([python, "-m", "pip", "install", "-U", "pip", "setuptools", "wheel", "--index", "https://pypi.org"])
-        _run([python, "-m", "pip", "install", "-r", repo_dir / "requirements.txt","--index", "https://pypi.org"])
+        _run(
+            [
+                python,
+                "-m",
+                "pip",
+                "install",
+                "-U",
+                "pip",
+                "setuptools",
+                "wheel",
+                "--index",
+                "https://pypi.org",
+            ]
+        )
+        _run(
+            [
+                python,
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                repo_dir / "requirements.txt",
+                "--index",
+                "https://pypi.org",
+            ]
+        )
         try:
             _run([python, "-m", "pip", "install", "-e", repo_dir])
         except InstallError:
             # у upstream бывают проблемы со сборкой при изоляции — ретрай
-            _run([python, "-m", "pip", "install", "--no-build-isolation", "-e", repo_dir])
+            _run(
+                [python, "-m", "pip", "install", "--no-build-isolation", "-e", repo_dir]
+            )
 
     apply_windows_patch(repo_dir)
 
