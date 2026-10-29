@@ -22,7 +22,9 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_install = sub.add_parser("install", help="установить SearXNG (идемпотентно)")
-    p_install.add_argument("--dir", help="каталог установки (по умолчанию ./searxng-local)")
+    p_install.add_argument(
+        "--dir", help="каталог установки (по умолчанию ./searxng-local)"
+    )
     p_install.add_argument(
         "--port", type=int, default=8888, help="порт в settings.yml (по умолчанию 8888)"
     )
@@ -30,7 +32,9 @@ def main(argv: list[str] | None = None) -> int:
     p_status = sub.add_parser("status", help="состояние установки")
     p_status.add_argument("--dir", help="каталог установки")
 
-    p_update = sub.add_parser("update", help="обновить SearXNG (git fetch + pip + патч)")
+    p_update = sub.add_parser(
+        "update", help="обновить SearXNG (git fetch + pip + патч)"
+    )
     p_update.add_argument("--dir", help="каталог установки")
 
     args = parser.parse_args(argv)
@@ -40,7 +44,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "install":
             installer.ensure_supported_host()
             marker = installer.install(install_dir, args.port)
-            print(f"Установлено: {install_dir} (порт {marker['port']}, commit {marker['commit']})")
+            print(
+                f"Установлено: {install_dir} (порт {marker['port']}, commit {marker['commit']})"
+            )
         elif args.command == "status":
             marker = installer.read_marker(install_dir)
             if marker is None:
@@ -49,9 +55,10 @@ def main(argv: list[str] | None = None) -> int:
             port = int(marker.get("port", 8888))
             listening = installer.port_in_use(port)
             print(f"Каталог:      {install_dir}")
-            print(f"Порт:         {port} {'(слушает — запущен)' if listening else '(свободен)'}")
+            print(
+                f"Порт:         {port} {'(слушает — запущен)' if listening else '(свободен)'}"
+            )
             print(f"Commit:       {marker.get('commit', '?')}")
-            print(f"venv:         {'ок' if installer.venv_python(install_dir).is_file() else 'ОТСУТСТВУЕТ'}")
             print(
                 f"settings.yml: "
                 f"{'ок' if (install_dir / installer.SETTINGS_NAME).is_file() else 'ОТСУТСТВУЕТ'}"

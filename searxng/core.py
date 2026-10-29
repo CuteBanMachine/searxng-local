@@ -122,12 +122,10 @@ class SearXNG:
         self._port = self._requested_port
 
         # --- установка (или «ремонт» частичной) ---
-        needs_install = (
-            installer.read_marker(self._install_dir) is None
-            or not installer.venv_is_valid(self._install_dir)
-            or not installer.is_checkout_complete(
-                self._install_dir / installer.REPO_DIR_NAME
-            )
+        needs_install = installer.read_marker(
+            self._install_dir
+        ) is None or not installer.is_checkout_complete(
+            self._install_dir / installer.REPO_DIR_NAME
         )
         if needs_install:
             if not auto_install:
@@ -360,8 +358,8 @@ class SearXNG:
 
     def _spawn(self) -> None:
         repo_dir = self._install_dir / installer.REPO_DIR_NAME
-        python = installer.venv_python(self._install_dir)
-        if not python.is_file() or not (repo_dir / "searx" / "webapp.py").is_file():
+        python = sys.executable
+        if not (repo_dir / "searx" / "webapp.py").is_file():
             raise NotInstalledError(
                 f"Установка в {self._install_dir} неполна (нет venv или searx/webapp.py). "
                 "Удалите каталог установки — при следующем запуске она пройдёт заново."

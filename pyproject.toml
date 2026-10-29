@@ -20,13 +20,36 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
 ]
-dependencies = ["httpx>=0.27"]
+dependencies = [
+    "certifi==2026.10.19",
+    "babel==2.18.0",
+    "flask-babel==4.0.0",
+    "flask==3.1.3",
+    "jinja2==3.1.6",
+    "lxml==6.1.3",
+    "pygments==2.21.0",
+    "python-dateutil==2.9.0.post0",
+    "pyyaml==6.0.3",
+    "curl_cffi==0.16.3",
+    "valkey==6.1.1",
+    "markdown-it-py==4.2.0",
+    "msgspec==0.22.0",
+    "typer==0.27.3",
+    "isodate==0.7.2",
+    "whitenoise==6.12.0",
+    "typing-extensions==4.16.0",
+    "granian==2.8.4",
+    "granian[pname]==2.8.4",
+    "httpx==0.28.1",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+
 
 [tool.setuptools.package-data]
-searxng_local = ["settings.template.yml"]
+searxng = ["settings.template.yml"]
+

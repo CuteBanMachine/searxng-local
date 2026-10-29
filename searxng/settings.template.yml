@@ -12,3 +12,9 @@ search:
   formats:
     - html
     - json
+
+outgoing:
+  proxies:
+    all: http://internet.polyus.com:8080
+  request_timeout: 10.0
+  verify: false
